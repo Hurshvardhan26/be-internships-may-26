@@ -23,6 +23,10 @@ export async function postSignal(req, reply) {
     const info = insertSignal(userId, type, payload, idem, t);
     return { id: info.lastInsertRowid, userId, type, payload: String(payload), idempotencyKey: idem, createdAt: t };
   } catch (e) {
+    if (idem && (e.code === 'SQLITE_CONSTRAINT_UNIQUE' || (e.message && e.message.includes('UNIQUE')))) {
+      const existing = getByIdemKey(idem);
+      if (existing) return existing;
+    }
     req.log.error({ err: e, ctx: 'insertSignal' });
     return reply.code(503).send({ error: 'db_unavailable' });
   }
